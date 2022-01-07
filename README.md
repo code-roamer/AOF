@@ -2,6 +2,17 @@
 
 This repository is the official PyTorch implementation of [IF-Defense: 3D Adversarial Point Cloud Defense via Implicit Function based Restoration](https://arxiv.org/abs/2010.05272), where we study adversarial defense in 3D point cloud and propose an deep implicit function based defense method that achieves state-of-the-art (SOTA) performance against all the existing attacks on several typical point cloud networks.
 
+
+## related papers
+```
+https://arxiv.org/pdf/1903.00073.pdf * ijcai 19
+https://arxiv.org/pdf/2111.00861.pdf 
+
+```
+
+
+
+
 ## Introduction
 
 Point cloud is an important 3D data representation widely used in many essential applications (e.g. autonomous driving, robotics). Leveraging deep neural networks (DNNs), recent works have shown great success in processing 3D point clouds. However, **DNNs are vulnerable to adversarial attacks**, bringing security threat to those safety-critical applications.
