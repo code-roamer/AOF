@@ -15,6 +15,8 @@ def load_data(data_root, partition='train'):
         return npz['train_pc'], npz['train_label']
     elif partition == 'attack':
         return npz['test_pc'], npz['test_label'], npz['target_label']
+    elif partition == 'transfer':
+        return npz['ori_pc'], npz['test_pc'], npz['test_label']
     else:
         return npz['test_pc'], npz['test_label']
 
@@ -209,3 +211,30 @@ class CustomModelNet40(Dataset):
 
     def __len__(self):
         return self.data.shape[0]
+
+
+class ModelNet40Transfer(Dataset):
+    """Modelnet40 dataset for target attack evaluation.
+    We return an additional target label for an example.
+    """
+
+    def __init__(self, data_root, num_points):
+        self.ori_data, self.adv_data, self.label = \
+            load_data(data_root, partition='transfer')
+        self.num_points = num_points
+
+    def __getitem__(self, item):
+        """Returns: point cloud as [N, 3], its label as a scalar
+            and its target label for attack as a scalar.
+        """
+        ori_pc = self.ori_data[item][:self.num_points, :3]
+        adv_pc = self.adv_data[item][:self.num_points, :3]
+        label = self.label[item]
+
+        ori_pc = normalize_points_np(ori_pc)
+
+
+        return ori_pc, adv_pc, label
+
+    def __len__(self):
+        return self.adv_data.shape[0]

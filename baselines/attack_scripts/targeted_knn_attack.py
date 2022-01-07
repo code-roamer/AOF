@@ -4,10 +4,14 @@ import os
 from tqdm import tqdm
 import argparse
 import numpy as np
+import psutil
 
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
+import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel
 
 import sys
 sys.path.append('../')
@@ -15,7 +19,7 @@ sys.path.append('./')
 
 from config import BEST_WEIGHTS
 from config import MAX_KNN_BATCH as BATCH_SIZE
-from dataset import ModelNetDataLoader
+from dataset import ModelNetDataLoader, ModelNet40Attack
 from model import DGCNN, PointNetCls, PointNet2ClsSsg, PointConvDensityClsSsg
 from util.utils import str2bool, set_seed
 from attack import CWKNN, CWUKNN
@@ -34,31 +38,9 @@ def attack():
         with torch.no_grad():
             pc, label = pc.float().cuda(non_blocking=True), \
                 label.long().cuda(non_blocking=True)
-
+                
         # attack!
         best_pc, success_num = attacker.attack(pc, label)
-        adv_pc = torch.tensor(best_pc.transpose(0, 2, 1)).to(pc)
-        if args.model.lower() == 'pointnet':
-            logits, _, _ = model(adv_pc)
-        else:
-            logits = model(adv_pc)
-        preds = torch.argmax(logits, dim=-1)
-
-        if args.trans_model.lower() == 'pointnet':
-            trans_logits, _, _ = trans_model(adv_pc)
-        else:
-            trans_logits = trans_model(adv_pc)
-        trans_preds = torch.argmax(trans_logits, dim=-1)
-
-        at_num += (preds != label).sum().item()
-        trans_num += (trans_preds != label).sum().item()
-        
-        total_num += args.batch_size
-
-        
-        print(f"attack success rate:{at_num / total_num}, trans success rate: {trans_num / total_num}")
-        # np.save(f'visual/vis_knn.npy', best_pc.transpose(0, 2, 1))
-        # break
 
         # results
         num += success_num
@@ -80,10 +62,6 @@ if __name__ == "__main__":
                         choices=['pointnet', 'pointnet2',
                                  'dgcnn', 'pointconv'],
                         help='Model to use, [pointnet, pointnet++, dgcnn, pointconv]')
-    parser.add_argument('--trans_model', type=str, default='pointnet', metavar='N',
-                        choices=['pointnet', 'pointnet2',
-                                 'dgcnn', 'pointconv'],
-                        help='Model to use, [pointnet, pointnet++, dgcnn, pointconv]')
     parser.add_argument('--feature_transform', type=str2bool, default=True,
                         help='whether to use STN on features in PointNet')
     parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
@@ -101,10 +79,14 @@ if __name__ == "__main__":
                         help='Adversarial loss function to use')
     parser.add_argument('--kappa', type=float, default=15.,
                         help='min margin in logits adv loss')
+    parser.add_argument('--budget', type=float, default=0.1,
+                        help='clip budget')
     parser.add_argument('--attack_lr', type=float, default=1e-3,
                         help='lr in CW optimization')
     parser.add_argument('--num_iter', type=int, default=2500, metavar='N',
                         help='Number of iterations in each search step')
+    parser.add_argument('--local_rank', default=-1, type=int,
+                        help='node rank for distributed training')
 
     parser.add_argument('--num_point', type=int, default=1024,
                         help='num of points to use')
@@ -120,6 +102,9 @@ if __name__ == "__main__":
     set_seed(1)
     print(args)
 
+
+    dist.init_process_group(backend='nccl')
+    torch.cuda.set_device(args.local_rank)
     cudnn.benchmark = True
 
     # build model
@@ -145,23 +130,10 @@ if __name__ == "__main__":
         # eliminate 'module.' in keys
         state_dict = {k[7:]: v for k, v in state_dict.items()}
         model.load_state_dict(state_dict)
-    model = torch.nn.DataParallel(model).cuda()
 
-    # build transfer model
-    if args.trans_model.lower() == 'dgcnn':
-        trans_model = DGCNN(args.emb_dims, args.k, output_channels=40)
-    elif args.trans_model.lower() == 'pointnet':
-        trans_model = PointNetCls(k=40, feature_transform=args.feature_transform)
-    elif args.trans_model.lower() == 'pointnet2':
-        trans_model = PointNet2ClsSsg(num_classes=40)
-    elif args.trans_model.lower() == 'pointconv':
-        trans_model = PointConvDensityClsSsg(num_classes=40)
-    else:
-        print('Model not recognized')
-        exit(-1)
-    trans_model = torch.nn.DataParallel(trans_model).cuda()
-    trans_model.load_state_dict(torch.load(BEST_WEIGHTS[args.trans_model]))
-    trans_model.eval()
+    model = DistributedDataParallel(
+        model.cuda(), device_ids=[args.local_rank])
+    # model = torch.nn.DataParallel(model).cuda()
 
     # setup attack settings
     if args.adv_func == 'logits':
@@ -172,14 +144,17 @@ if __name__ == "__main__":
     dist_func = ChamferkNNDist(chamfer_method='adv2ori',
                                knn_k=5, knn_alpha=1.05,
                                chamfer_weight=5., knn_weight=3.)
-    clip_func = ProjectInnerClipLinf(budget=0.18)
+    clip_func = ProjectInnerClipLinf(budget=args.budget)
     attacker = CWKNN(model, adv_func, dist_func, clip_func,
                      attack_lr=args.attack_lr,
                      num_iter=args.num_iter)
 
     # attack
     test_set = ModelNetDataLoader(root=args.data_root, args=args, split='test', process_data=args.process_data)
-    test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=10, drop_last=False)
+    test_sampler = DistributedSampler(test_set, shuffle=False)
+    test_loader = DataLoader(test_set, batch_size=args.batch_size, 
+                    shuffle=False, num_workers=10, 
+                    drop_last=False, sampler=test_sampler)
 
     # run attack
     attacked_data, real_label, success_num = attack()
@@ -196,7 +171,7 @@ if __name__ == "__main__":
     if args.adv_func == 'logits':
         args.adv_func = 'logits_kappa={}'.format(args.kappa)
     save_name = 'kNN-{}-{}-success_{:.4f}.npz'.\
-        format(args.model, args.adv_func,
+        format(args.model, args.budget,
                success_rate)
     np.savez(os.path.join(save_path, save_name),
              test_pc=attacked_data.astype(np.float32),

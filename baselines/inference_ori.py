@@ -1,44 +1,18 @@
 """Test the victim models"""
 import argparse
 import numpy as np
-import os
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 
-from dataset import ModelNet40Attack, ModelNet40Transfer, load_data
+from dataset import ModelNet40Attack, ModelNet40, ModelNetDataLoader, ModelNet40Normal
 from model import DGCNN, PointNetCls, PointNet2ClsSsg, PointConvDensityClsSsg
 from util.utils import AverageMeter, str2bool, set_seed
 from config import BEST_WEIGHTS
 from config import MAX_TEST_BATCH as BATCH_SIZE
 from config import MAX_DUP_TEST_BATCH as DUP_BATCH_SIZE
-
-def merge(data_root, prefix):
-    ori_data_lst = []
-    adv_data_lst = []
-    label_lst = []
-    save_name = prefix+"-concat.npz"
-    if os.path.exists(os.path.join(data_root, save_name)):
-        return os.path.join(data_root, save_name)
-    for file in os.listdir(data_root):
-        if file.startswith(prefix):
-            file_path = os.path.join(data_root, file)
-            ori_data, adv_data, label = \
-                load_data(file_path, partition='transfer')
-            ori_data_lst.append(ori_data)
-            adv_data_lst.append(adv_data)
-            label_lst.append(label)
-    all_ori_pc = np.concatenate(ori_data_lst, axis=0)  # [num_data, K, 3]
-    all_adv_pc = np.concatenate(adv_data_lst, axis=0)  # [num_data, K, 3]
-    all_real_lbl = np.concatenate(label_lst, axis=0)  # [num_data]
-
-    np.savez(os.path.join(data_root, save_name),
-             ori_pc=all_ori_pc.astype(np.float32),
-             test_pc=all_adv_pc.astype(np.float32),
-             test_label=all_real_lbl.astype(np.uint8))
-    return os.path.join(data_root, save_name)
 
 
 def get_model_name(npz_path):
@@ -90,34 +64,55 @@ def test_normal():
     Test on all data.
     """
     model.eval()
-    at_num, at_denom = 0, 0
-
+    data_iter_at = iter(test_loader)
+    data_iter_ori = iter(test_loader_ori)
     num, denom = 0, 0
     with torch.no_grad():
-        for ori_data, adv_data, label in test_loader:
-            ori_data, adv_data, label = \
-                ori_data.float().cuda(), adv_data.float().cuda(), label.long().cuda()
-            # to [B, 3, N] point cloud
-            ori_data = ori_data.transpose(1, 2).contiguous()
-            adv_data = adv_data.transpose(1, 2).contiguous()
+        for (data_at, label_at), (data_ori, label_ori) in zip(data_iter_at, data_iter_ori):
+            data_at, label = \
+                data_at.float().cuda(), label_ori.long().cuda()
+            data_ori = data_ori.float().cuda()
+            data_ori = data_ori.transpose(1, 2).contiguous()
+            data_at = data_at.transpose(1, 2).contiguous()
             batch_size = label.size(0)
             # batch in
             if args.model.lower() == 'pointnet':
-                logits, _, _ = model(ori_data)
-                adv_logits, _, _ = model(adv_data)
+                logits, _, _ = model(data_at)
             else:
-                logits = model(ori_data)
-                adv_logits = model(adv_data)
-            ori_preds = torch.argmax(logits, dim=-1)
-            adv_preds = torch.argmax(adv_logits, dim=-1)
-            mask_ori = (ori_preds == label)
-            mask_adv = (adv_preds == label)
-            at_denom += mask_ori.sum().float()
-            at_num += mask_ori.sum().float() - (mask_ori * mask_adv).sum().float()
-            denom += float(batch_size)
-            num += mask_adv.sum().float()
+                logits = model(data_at)
+            preds_at = torch.argmax(logits, dim=-1)
 
-    print('Overall attack success rate: {:.4f}'.format(at_num / (at_denom + 1e-9)))
+            if args.model.lower() == 'pointnet':
+                logits, _, _ = model(data_ori)
+            else:
+                logits = model(data_ori)
+            preds_ori = torch.argmax(logits, dim=-1)
+            #print(preds_ori, label)
+            mask_ori = (preds_ori == label)
+            mask_at = (preds_at == label)
+            denom += mask_ori.sum().float()
+            num += mask_ori.sum().float() - (mask_ori * mask_at).sum().float()
+
+    print('Overall success rate: {:.6f}'.format(num / (denom + 1e-9)))
+
+    num, denom = 0, 0
+    with torch.no_grad():
+        for data, label in test_loader:
+            data, label = \
+                data.float().cuda(), label.long().cuda()
+            # to [B, 3, N] point cloud
+            #print(f"{data.shape[0]}/{len(test_loader)}")
+            data = data.transpose(1, 2).contiguous()
+            batch_size = label.size(0)
+            # batch in
+            if args.model.lower() == 'pointnet':
+                logits, _, _ = model(data)
+            else:
+                logits = model(data)
+            preds = torch.argmax(logits, dim=-1)
+            denom += float(batch_size)
+            num += (preds == label).sum().float()
+
     print('Overall accuracy: {:.4f}'.format(num / (denom + 1e-9)))
 
 
@@ -125,8 +120,6 @@ if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser(description='Point Cloud Recognition')
     parser.add_argument('--data_root', type=str,
-                        default='')
-    parser.add_argument('--prefix', type=str,
                         default='')
     parser.add_argument('--mode', type=str, default='normal',
                         choices=['normal', 'target'],
@@ -234,16 +227,23 @@ if __name__ == "__main__":
     else:
         model.load_state_dict(torch.load(BEST_WEIGHTS[args.model]))
 
-    data_path = merge(args.data_root, args.prefix)
     # prepare data
     if args.mode == 'target':
-        test_set = ModelNet40Attack(data_path, num_points=args.num_points,
+        test_set = ModelNet40Attack(args.data_root, num_points=args.num_points,
                                     normalize=args.normalize_pc)
     else:
-        test_set = ModelNet40Transfer(data_path, num_points=args.num_point)
+        test_set_ori = ModelNetDataLoader(root='official_data/modelnet40_normal_resampled', args=args, split='test', process_data=args.process_data)
+        test_set = ModelNet40Normal(args.data_root, num_points=args.num_point,
+                                normalize=False)
+        # test_set_ori = ModelNet40Attack('data/attack_data.npz', num_points=args.num_point,
+        #                         normalize=True)
     test_loader = DataLoader(test_set, batch_size=args.batch_size,
                              shuffle=False, num_workers=8,
                              pin_memory=True, drop_last=False)
+    # test_loader_ori = DataLoader(test_set_ori, batch_size=args.batch_size,
+    #                          shuffle=False, num_workers=8,
+    #                          pin_memory=True, drop_last=False)
+    test_loader_ori = DataLoader(test_set_ori, batch_size=args.batch_size, shuffle=False, num_workers=10, drop_last=False)
 
     # test
     if args.mode == 'normal':
