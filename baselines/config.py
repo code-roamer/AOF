@@ -3,6 +3,15 @@ Assign some hyper-parameters, e.g. batch size for attack
 """
 BEST_WEIGHTS = {
     # trained on standard mn40 dataset
+    'ori_mn40': {
+        1024: {
+            'pointnet': 'pretrain/mn40/pointnet.pth',
+            'pointnet2': 'pretrain/mn40/pointnet2.pth',
+            'pointconv': 'pretrain/mn40/pointconv.pth',
+            'dgcnn': 'pretrain/mn40/dgcnn.pth',
+        },
+    },
+    # trained on resampled normal mn40 dataset
     'mn40': {
         1024: {
             'pointnet': 'custom_pretrain/mn40/pointnet.pth',
@@ -50,9 +59,9 @@ PU_NET_WEIGHT = 'defense/DUP_Net/pu-in_1024-up_4.pth'
 MAX_TEST_BATCH = {
     1024: {
         'pointnet': 512,
-        'pointnet2': 256,
+        'pointnet2': 168,
         'dgcnn': 96,
-        'pointconv': 320,
+        'pointconv': 128,
     },
 }
 
