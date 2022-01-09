@@ -21,7 +21,7 @@ from config import MAX_PERTURB_BATCH as BATCH_SIZE
 from dataset import ModelNet40Attack, ModelNetDataLoader
 from model import DGCNN, PointNetCls, PointNet2ClsSsg, PointConvDensityClsSsg
 from util.utils import str2bool, set_seed
-from attack import CWPerturb
+from attack import CWPerturbT
 from attack import CrossEntropyAdvLoss, LogitsAdvLoss, UntargetedLogitsAdvLoss
 from attack import L2Dist
 from attack import ClipPointsLinf
@@ -31,31 +31,35 @@ def attack():
     model.eval()
     all_adv_pc = []
     all_real_lbl = []
+    all_target_lbl = []
     num = 0
-    for pc, label in tqdm(test_loader):
+    for pc, label, target in tqdm(test_loader):
         with torch.no_grad():
             pc, label = pc.float().cuda(non_blocking=True), \
                 label.long().cuda(non_blocking=True)
+            target_label = target.long().cuda(non_blocking=True)
 
         # attack!
-        _, best_pc, success_num = attacker.attack(pc, label)
+        _, best_pc, success_num = attacker.attack(pc, target_label)
 
         # results
         num += success_num
         all_adv_pc.append(best_pc)
         all_real_lbl.append(label.detach().cpu().numpy())
+        all_target_lbl.append(target_label.detach().cpu().numpy())
 
     # accumulate results
     all_adv_pc = np.concatenate(all_adv_pc, axis=0)  # [num_data, K, 3]
     all_real_lbl = np.concatenate(all_real_lbl, axis=0)  # [num_data]
-    return all_adv_pc, all_real_lbl, num
+    all_target_lbl = np.concatenate(all_target_lbl, axis=0)  # [num_data]
+    return all_adv_pc, all_real_lbl, all_target_lbl, num
 
 
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser(description='Point Cloud Recognition')
     parser.add_argument('--data_root', type=str,
-                        default='official_data/modelnet40_normal_resampled')
+                        default='data/attack_data.npz')
     parser.add_argument('--model', type=str, default='pointnet', metavar='N',
                         choices=['pointnet', 'pointnet2',
                                  'dgcnn', 'pointconv'],
@@ -136,39 +140,39 @@ if __name__ == "__main__":
 
     # setup attack settings
     if args.adv_func == 'logits':
-        adv_func = UntargetedLogitsAdvLoss(kappa=args.kappa)
+        adv_func = LogitsAdvLoss(kappa=args.kappa)
     else:
         adv_func = CrossEntropyAdvLoss()
     dist_func = L2Dist()
     clip_func = ClipPointsLinf(budget=args.budget)
     # hyper-parameters from their official tensorflow code
-    attacker = CWPerturb(model, adv_func, dist_func,
+    attacker = CWPerturbT(model, adv_func, dist_func,
                          attack_lr=args.attack_lr,
                          init_weight=10., max_weight=80.,
                          binary_step=args.binary_step,
                          num_iter=args.num_iter, clip_func=clip_func)
 
     # attack
-    test_set = ModelNetDataLoader(root=args.data_root, args=args, split='test', process_data=args.process_data)
-    test_sampler = DistributedSampler(test_set, shuffle=False)
-    test_loader = DataLoader(test_set, batch_size=args.batch_size, 
-                    shuffle=False, num_workers=4, 
-                    drop_last=False, sampler=test_sampler)
-    # test_set = ModelNet40Attack(args.data_root, num_point=args.num_point,
-    #                             normalize=True)
-    # test_loader = DataLoader(test_set, batch_size=args.batch_size,
-    #                          shuffle=False, num_workers=4,
-    #                          pin_memory=True, drop_last=False)
+    # test_set = ModelNetDataLoader(root=args.data_root, args=args, split='test', process_data=args.process_data)
+    # test_sampler = DistributedSampler(test_set, shuffle=False)
+    # test_loader = DataLoader(test_set, batch_size=args.batch_size, 
+    #                 shuffle=False, num_workers=4, 
+    #                 drop_last=False, sampler=test_sampler)
+    test_set = ModelNet40Attack(args.data_root, num_points=args.num_point,
+                                normalize=True)
+    test_loader = DataLoader(test_set, batch_size=args.batch_size,
+                             shuffle=False, num_workers=4,
+                             pin_memory=True, drop_last=False)
 
     # run attack
-    attacked_data, real_label, success_num = attack()
+    attacked_data, real_label, target_label, success_num = attack()
 
     # accumulate results
     data_num = len(test_set)
     success_rate = float(success_num) / float(data_num)
 
     # save results
-    save_path = './attack/results/{}_{}/Perturb'.\
+    save_path = './attack/results/{}_{}/PerturbT'.\
         format(args.dataset, args.num_point)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
@@ -179,4 +183,5 @@ if __name__ == "__main__":
                success_rate)
     np.savez(os.path.join(save_path, save_name),
              test_pc=attacked_data.astype(np.float32),
-             test_label=real_label.astype(np.uint8))
+             test_label=real_label.astype(np.uint8),
+            target_label=target_label.astype(np.uint8))
