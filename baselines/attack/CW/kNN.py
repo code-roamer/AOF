@@ -87,7 +87,7 @@ class CWKNN:
 
             # print
             pred = torch.argmax(logits, dim=1)  # [B]
-            success_num = (pred != target).sum().item()
+            success_num = (pred == target).sum().item()
             if iteration % (self.num_iter // 5) == 0:
                 print('Iteration {}/{}, success {}/{}\n'
                       'adv_loss: {:.4f}, dist_loss: {:.4f}'.
@@ -136,7 +136,7 @@ class CWKNN:
             if isinstance(logits, tuple):  # PointNet
                 logits = logits[0]
             pred = torch.argmax(logits, dim=-1)  # [B]
-            success_num = (pred != target).\
+            success_num = (pred == target).\
                 sum().detach().cpu().item()
 
         # return final results
