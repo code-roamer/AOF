@@ -213,6 +213,9 @@ class CWAOF:
 
         # end of CW attack
         # fail to attack some examples
+        fail_idx = (o_bestscore < 0)
+        o_bestattack[fail_idx] = input_val[fail_idx]
+
         adv_pc = torch.tensor(o_bestattack).to(adv_data)
         adv_pc = self.clip_func(adv_pc, ori_data)
 

@@ -87,7 +87,7 @@ if __name__ == "__main__":
                         help='low_pass number')
     parser.add_argument('--budget', type=float, default=0.08,
                         help='FGM attack budget')
-    parser.add_argument('--GAMMA', type=float, default=0.5,
+    parser.add_argument('--GAMMA', type=float, default=0.25,
                         help='hyperparameter gamma')
     parser.add_argument('--binary_step', type=int, default=2, metavar='N',
                         help='Binary search step')
