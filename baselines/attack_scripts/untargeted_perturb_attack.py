@@ -67,7 +67,7 @@ if __name__ == "__main__":
                                  'opt_mn40', 'conv_opt_mn40'])
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
                         help='Size of batch')
-    parser.add_argument('--num_point', type=int, default=1024,
+    parser.add_argument('--num_points', type=int, default=1024,
                         help='num of points to use')
     parser.add_argument('--emb_dims', type=int, default=1024, metavar='N',
                         help='Dimension of embeddings in DGCNN')
@@ -94,8 +94,8 @@ if __name__ == "__main__":
     parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
     parser.add_argument('--process_data', action='store_true', default=False, help='save data offline')
     args = parser.parse_args()
-    BATCH_SIZE = BATCH_SIZE[args.num_point]
-    BEST_WEIGHTS = BEST_WEIGHTS[args.dataset][args.num_point]
+    BATCH_SIZE = BATCH_SIZE[args.num_points]
+    BEST_WEIGHTS = BEST_WEIGHTS[args.dataset][args.num_points]
     if args.batch_size == -1:
         args.batch_size = BATCH_SIZE[args.model]
     set_seed(1)
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     # save results
     save_path = './attack/results/{}_{}/PerturbU'.\
-        format(args.dataset, args.num_point)
+        format(args.dataset, args.num_points)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     if args.adv_func == 'logits':
