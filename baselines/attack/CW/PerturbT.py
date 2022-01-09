@@ -15,7 +15,7 @@ class CWPerturbT:
     """
 
     def __init__(self, model, adv_func, dist_func, attack_lr=1e-2,
-                 init_weight=10., max_weight=80., binary_step=10, num_iter=500, clip_func=None):
+                 init_weight=10., max_weight=80., binary_step=10, num_iter=500):
         """CW attack by perturbing points.
 
         Args:
@@ -39,7 +39,6 @@ class CWPerturbT:
         self.max_weight = max_weight
         self.binary_step = binary_step
         self.num_iter = num_iter
-        self.clip_func = clip_func
 
     def attack(self, data, target):
         """Attack on given data to target.
@@ -118,7 +117,7 @@ class CWPerturbT:
                     if dist < bestdist[e] and pred == label:
                         bestdist[e] = dist
                         bestscore[e] = pred
-                    if dist < o_bestdist[e] and pred != label:
+                    if dist < o_bestdist[e] and pred == label:
                         o_bestdist[e] = dist
                         o_bestscore[e] = pred
                         o_bestattack[e] = ii
@@ -135,10 +134,6 @@ class CWPerturbT:
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-
-                if self.clip_func is not None:
-                    adv_data.data = self.clip_func(adv_data.clone().detach(),
-                                                ori_data)
 
                 t4 = time.time()
                 backward_time += t4 - t3
@@ -157,7 +152,7 @@ class CWPerturbT:
 
             # adjust weight factor
             for e, label in enumerate(label_val):
-                if bestscore[e] != label and bestscore[e] != -1 and bestdist[e] <= o_bestdist[e]:
+                if bestscore[e] == label and bestscore[e] != -1 and bestdist[e] <= o_bestdist[e]:
                     # success
                     lower_bound[e] = max(lower_bound[e], current_weight[e])
                     current_weight[e] = (lower_bound[e] + upper_bound[e]) / 2.
