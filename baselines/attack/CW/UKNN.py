@@ -103,7 +103,7 @@ class CWUKNN:
                 adv_data.transpose(1, 2).contiguous(),
                 ori_data.transpose(1, 2).contiguous()).mean() * K
 
-            loss = -adv_loss + dist_loss
+            loss = adv_loss + dist_loss
             opt.zero_grad()
             loss.backward()
             opt.step()
