@@ -1,4 +1,5 @@
 from .Perturb import CWPerturb
+from .PerturbT import CWPerturbT
 from .Add import CWAdd
 from .kNN import CWKNN
 from .UKNN import CWUKNN
