@@ -211,6 +211,9 @@ class CWTAOF:
 
         # end of CW attack
         # fail to attack some examples
+        fail_idx = (o_bestscore < 0)
+        o_bestattack[fail_idx] = input_val[fail_idx]
+
         adv_pc = torch.tensor(o_bestattack).to(adv_data)
         adv_pc = self.clip_func(adv_pc, ori_data)
 
@@ -222,4 +225,4 @@ class CWTAOF:
         print(preds.shape)
         success_num = (preds == target).sum().item()
         print('Successfully attack {}/{}'.format(success_num, B))
-        return o_bestdist, o_bestattack.transpose((0, 2, 1)), success_num
+        return o_bestdist, adv_pc.detach().cpu().numpy().transpose((0, 2, 1)), success_num
