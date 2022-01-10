@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('--feature_transform', type=str2bool, default=True,
                         help='whether to use STN on features in PointNet')
     parser.add_argument('--dataset', type=str, default='mn40',
-                        choices=['mn40'])
+                        choices=['mn40', 'aug_mn40'])
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
                         help='Size of batch')
     parser.add_argument('--num_iter', type=int, default=200, metavar='N',

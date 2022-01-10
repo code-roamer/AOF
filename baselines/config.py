@@ -20,6 +20,17 @@ BEST_WEIGHTS = {
             'dgcnn': 'custom_pretrain/mn40/dgcnn.pth',
         },
     },
+
+    # trained on resampled normal mn40 dataset with data augmentation
+    'aug_mn40': {
+        1024: {
+            'pointnet': 'custom_pretrain_aug/mn40/pointnet.pth',
+            'pointnet2': 'custom_pretrain_aug/mn40/pointnet2.pth',
+            'pointconv': 'custom_pretrain_aug/mn40/pointconv.pth',
+            'dgcnn': 'custom_pretrain_aug/mn40/dgcnn.pth',
+        },
+    },
+
     # trained on mn40 + ONet remesh-resampled mn40
     'remesh_mn40': {
         1024: {
