@@ -28,6 +28,35 @@ from attack import ClipPointsLinf
 from latent_3d_points.src import encoders_decoders
 from attack import CWAdvPC
 
+
+# def attack():
+#     model.eval()
+#     all_ori_pc = []
+#     all_adv_pc = []
+#     all_real_lbl = []
+#     num = 0
+#     for pc, label, target in tqdm(test_loader):
+#         with torch.no_grad():
+#             pc, label = pc.float().cuda(non_blocking=True), \
+#                 label.long().cuda(non_blocking=True)
+#             target_label = target.long().cuda(non_blocking=True)
+
+#         # attack!
+#         _, best_pc, success_num = attacker.attack(pc, target_label)
+#         # np.save(f'visual/vis_aof.npy', best_pc.transpose(0, 2, 1))
+
+#         # results
+#         num += success_num
+#         all_ori_pc.append(pc.detach().cpu().numpy())
+#         all_adv_pc.append(best_pc)
+#         all_real_lbl.append(label.detach().cpu().numpy())
+
+#     # accumulate results
+#     all_ori_pc = np.concatenate(all_ori_pc, axis=0)  # [num_data, K, 3]
+#     all_adv_pc = np.concatenate(all_adv_pc, axis=0)  # [num_data, K, 3]
+#     all_real_lbl = np.concatenate(all_real_lbl, axis=0)  # [num_data]
+#     return all_ori_pc, all_adv_pc, all_real_lbl, num
+
 def attack():
     model.eval()
     all_adv_pc = []
@@ -41,7 +70,7 @@ def attack():
             target_label = target.long().cuda(non_blocking=True)
 
         # attack!
-        best_pc, success_num = attacker.attack(pc, target_label)
+        _, best_pc, success_num = attacker.attack(pc, target_label)
 
         # results
         num += success_num
