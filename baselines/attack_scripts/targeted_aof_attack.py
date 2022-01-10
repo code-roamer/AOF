@@ -65,7 +65,7 @@ if __name__ == "__main__":
                         help='Model to use, [pointnet, pointnet++, dgcnn, pointconv]')
     parser.add_argument('--feature_transform', type=str2bool, default=False,
                         help='whether to use STN on features in PointNet')
-    parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
+    parser.add_argument('--dataset', type=str, default='ori_mn40', metavar='N',
                         choices=['ori_mn40', 'mn40', 'remesh_mn40',
                                  'opt_mn40', 'conv_opt_mn40'])
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
