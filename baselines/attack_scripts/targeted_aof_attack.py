@@ -65,7 +65,7 @@ if __name__ == "__main__":
                         help='Model to use, [pointnet, pointnet++, dgcnn, pointconv]')
     parser.add_argument('--feature_transform', type=str2bool, default=False,
                         help='whether to use STN on features in PointNet')
-    parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
+    parser.add_argument('--dataset', type=str, default='ori_mn40', metavar='N',
                         choices=['ori_mn40', 'mn40', 'remesh_mn40',
                                  'opt_mn40', 'conv_opt_mn40'])
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
@@ -174,9 +174,9 @@ if __name__ == "__main__":
         os.makedirs(save_path)
     if args.adv_func == 'logits':
         args.adv_func = 'logits_kappa={}'.format(args.kappa)
-    save_name = 'TAOF-{}-{}-success_{:.4f}-rank_{}.npz'.\
+    save_name = 'TAOF-{}-{}-success_{:.4f}-{:.2f}-rank_{}.npz'.\
         format(args.model, args.adv_func,
-               success_rate, args.local_rank)
+               success_rate, args.kappa, args.local_rank)
     np.savez(os.path.join(save_path, save_name),
              test_pc=attacked_data.astype(np.float32),
              test_label=real_label.astype(np.uint8),
