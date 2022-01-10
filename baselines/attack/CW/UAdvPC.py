@@ -85,7 +85,6 @@ class CWUAdvPC:
                 adv_loss = (1-self.GAMMA) * self.adv_func(logits, target).mean()
                 opt.zero_grad()
                 adv_loss.backward()
-                opt.step()
 
                 #autoencoder adversarial loss
                 adv_data_constr = self.ae_model(adv_data)
@@ -94,7 +93,6 @@ class CWUAdvPC:
                     ae_logits = ae_logits[0]
 
                 ae_adv_loss = self.GAMMA * self.adv_func(ae_logits, target).mean()
-                opt.zero_grad()
                 ae_adv_loss.backward()
                 opt.step()
 

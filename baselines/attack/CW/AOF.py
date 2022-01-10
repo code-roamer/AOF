@@ -141,7 +141,6 @@ class CWAOF:
                 adv_loss = (1-self.GAMMA) * self.adv_func(logits, target).mean()
                 opt.zero_grad()
                 adv_loss.backward()
-                opt.step()
 
                 #low frequency adversarial loss
                 lfc_logits = self.model(lfc)
@@ -149,7 +148,6 @@ class CWAOF:
                     lfc_logits = lfc_logits[0]
 
                 lfc_adv_loss = self.GAMMA * self.adv_func(lfc_logits, target).mean()
-                opt.zero_grad()
                 lfc_adv_loss.backward()
                 opt.step()
 
