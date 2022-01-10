@@ -147,18 +147,18 @@ MAX_FGM_PERTURB_BATCH = {
 
 MAX_AdvPC_BATCH = {
     1024: {
-        'pointnet': 512,
-        'pointnet2': 64,
+        'pointnet': 248,
+        'pointnet2': 74,
         'dgcnn': 80,
-        'pointconv': 80,
+        'pointconv': 54,
     },
 }
 
 MAX_AOF_BATCH = {
     1024: {
         'pointnet': 512,
-        'pointnet2': 64,
+        'pointnet2': 84,
         'dgcnn': 80,
-        'pointconv': 80,
+        'pointconv': 128,
     },
 }
