@@ -17,7 +17,7 @@ sys.path.append('../')
 sys.path.append('./')
 
 from config import BEST_WEIGHTS
-from config import MAX_PERTURB_BATCH as BATCH_SIZE
+from config import MAX_AOF_BATCH as BATCH_SIZE
 from dataset import ModelNet40Attack
 from model import DGCNN, PointNetCls, PointNet2ClsSsg, PointConvDensityClsSsg
 from util.utils import str2bool, set_seed

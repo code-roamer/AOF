@@ -30,7 +30,7 @@ from model import DGCNN, PointNetCls, feature_transform_reguliarzer, \
 from util.utils import cal_loss, AverageMeter, get_lr, str2bool, set_seed
 
 from config import BEST_WEIGHTS
-from config import MAX_KNN_BATCH as BATCH_SIZE
+from config import MAX_AOF_BATCH as BATCH_SIZE
 from attack import CWAOF
 from attack import CrossEntropyAdvLoss, LogitsAdvLoss, UntargetedLogitsAdvLoss
 from attack import ClipPointsLinf, ChamferkNNDist, L2Dist
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                         help='low_pass number')
     parser.add_argument('--budget', type=float, default=0.18,
                         help='FGM attack budget')
-    parser.add_argument('--GAMMA', type=float, default=0.5,
+    parser.add_argument('--GAMMA', type=float, default=0.25,
                         help='hyperparameter gamma')
     parser.add_argument('--binary_step', type=int, default=2, metavar='N',
                         help='Number of binary search step')
