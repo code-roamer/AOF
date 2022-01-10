@@ -88,3 +88,5 @@ CUDA_VISIBLE_DEVICES=0 python inference.py --num_points=1024 --mode=normal/targe
 
 Please refer to ```command.txt``` for details about different parameters.
 
+#### soft link for dataset and pretrained models
+./soft_link.sh
