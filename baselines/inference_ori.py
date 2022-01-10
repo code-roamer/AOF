@@ -210,7 +210,10 @@ if __name__ == "__main__":
     if args.model.lower() == 'dgcnn':
         model = DGCNN(args.emb_dims, args.k, output_channels=40)
     elif args.model.lower() == 'pointnet':
-        model = PointNetCls(k=40, feature_transform=args.feature_transform)
+        if args.dataset == 'ori_mn40':
+            model = PointNetCls(k=40, feature_transform=False)
+        else:
+            model = PointNetCls(k=40, feature_transform=args.feature_transform)
     elif args.model.lower() == 'pointnet2':
         model = PointNet2ClsSsg(num_classes=40)
     elif args.model.lower() == 'pointconv':
