@@ -193,7 +193,7 @@ if __name__ == "__main__":
         format(args.dataset, args.num_point)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    save_name = 'AOF-{}-{}-{}-GAMMA_{}-success_{:.4f}-rank_{}.npz'.\
+    save_name = 'UAOF-{}-{}-{}-GAMMA_{}-success_{:.4f}-rank_{}.npz'.\
         format(args.model, args.budget,args.low_pass, args.GAMMA,
                success_rate, args.local_rank)
     np.savez(os.path.join(save_path, save_name),

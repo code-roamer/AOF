@@ -28,35 +28,6 @@ from attack import ClipPointsLinf
 from latent_3d_points.src import encoders_decoders
 from attack import CWAdvPC
 
-
-# def attack():
-#     model.eval()
-#     all_ori_pc = []
-#     all_adv_pc = []
-#     all_real_lbl = []
-#     num = 0
-#     for pc, label, target in tqdm(test_loader):
-#         with torch.no_grad():
-#             pc, label = pc.float().cuda(non_blocking=True), \
-#                 label.long().cuda(non_blocking=True)
-#             target_label = target.long().cuda(non_blocking=True)
-
-#         # attack!
-#         _, best_pc, success_num = attacker.attack(pc, target_label)
-#         # np.save(f'visual/vis_aof.npy', best_pc.transpose(0, 2, 1))
-
-#         # results
-#         num += success_num
-#         all_ori_pc.append(pc.detach().cpu().numpy())
-#         all_adv_pc.append(best_pc)
-#         all_real_lbl.append(label.detach().cpu().numpy())
-
-#     # accumulate results
-#     all_ori_pc = np.concatenate(all_ori_pc, axis=0)  # [num_data, K, 3]
-#     all_adv_pc = np.concatenate(all_adv_pc, axis=0)  # [num_data, K, 3]
-#     all_real_lbl = np.concatenate(all_real_lbl, axis=0)  # [num_data]
-#     return all_ori_pc, all_adv_pc, all_real_lbl, num
-
 def attack():
     model.eval()
     all_adv_pc = []
@@ -100,7 +71,7 @@ if __name__ == "__main__":
                         default='latent_3d_points/src/logs/mn40/AE/2021-12-31 15:15:52_1024/BEST_model9800_CD_0.0038.pth')
     parser.add_argument('--feature_transform', type=str2bool, default=True,
                         help='whether to use STN on features in PointNet')
-    parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
+    parser.add_argument('--dataset', type=str, default='ori_mn40', metavar='N',
                         choices=['mn40', 'ori_mn40','remesh_mn40', 'opt_mn40', 'conv_opt_mn40'])
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
                         help='Size of batch')
@@ -211,7 +182,7 @@ if __name__ == "__main__":
                          clip_func=clip_func)
 
     # run attack
-    ori_data, attacked_data, real_label, success_num = attack()
+    attacked_data, real_label, target_label, success_num = attack()
 
     # accumulate results
     data_num = len(test_set)
@@ -226,6 +197,6 @@ if __name__ == "__main__":
         format(args.model, args.budget, args.GAMMA,
                success_rate, args.local_rank)
     np.savez(os.path.join(save_path, save_name),
-             ori_pc=ori_data.astype(np.float32),
              test_pc=attacked_data.astype(np.float32),
-             test_label=real_label.astype(np.uint8))
+             test_label=real_label.astype(np.uint8),
+             target_label=target_label.astype(np.uint8))
