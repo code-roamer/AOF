@@ -174,9 +174,9 @@ if __name__ == "__main__":
         os.makedirs(save_path)
     if args.adv_func == 'logits':
         args.adv_func = 'logits_kappa={}'.format(args.kappa)
-    save_name = 'TAOF-{}-{}-success_{:.4f}-rank_{}.npz'.\
+    save_name = 'TAOF-{}-{}-success_{:.4f}-{:.2f}-rank_{}.npz'.\
         format(args.model, args.adv_func,
-               success_rate, args.local_rank)
+               success_rate, args.budget, args.local_rank)
     np.savez(os.path.join(save_path, save_name),
              test_pc=attacked_data.astype(np.float32),
              test_label=real_label.astype(np.uint8),

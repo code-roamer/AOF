@@ -29,6 +29,13 @@ CUDA_VISIBLE_DEVICES=0 python inference_ori.py --mode=normal --model={$MODEL} --
 #new inference code
 CUDA_VISIBLE_DEVICES=0 python inference.py --mode=normal --model={$MODEL} --data_folder=path/to/folder/of/npz --prefix=AOF-pointnet-0.18-100
 
+# infer ori target mode
+CUDA_VISIBLE_DEVICES=2 python inference_ori.py --mode=target --model=dgcnn
+
+# merge two
+python merge_two.py --data_root /home/ssd/zjl/zjl/AOF/aof/baselines/attack/results/mn40_1024/TAOF --f1 TAOF-dgcnn-logits_kappa=30.0-success_0.1673-rank_1.npz --f2 TAOF-dgcnn-logits_kappa=30.0-success_0.1799-rank_0.npz
+
+
 #################### baseline attacks
 # files to conduct attacks are in attack_scripts/
 We provide pytorch implementations of 7 attacks:

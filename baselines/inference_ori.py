@@ -130,7 +130,7 @@ if __name__ == "__main__":
                         help='Model to use, [pointnet, pointnet++, dgcnn, pointconv]. '
                              'If not specified, judge from data_root')
     parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
-                        choices=['mn40', 'remesh_mn40',
+                        choices=['mn40', 'ori_mn40', 'remesh_mn40',
                                  'opt_mn40', 'conv_opt_mn40'])
     parser.add_argument('--normalize_pc', type=str2bool, default=False,
                         help='normalize in dataloader')
@@ -210,7 +210,10 @@ if __name__ == "__main__":
     if args.model.lower() == 'dgcnn':
         model = DGCNN(args.emb_dims, args.k, output_channels=40)
     elif args.model.lower() == 'pointnet':
-        model = PointNetCls(k=40, feature_transform=args.feature_transform)
+        if args.dataset == 'ori_mn40':
+            model = PointNetCls(k=40, feature_transform=False)
+        else:
+            model = PointNetCls(k=40, feature_transform=args.feature_transform)
     elif args.model.lower() == 'pointnet2':
         model = PointNet2ClsSsg(num_classes=40)
     elif args.model.lower() == 'pointconv':
@@ -231,6 +234,8 @@ if __name__ == "__main__":
     if args.mode == 'target':
         test_set = ModelNet40Attack(args.data_root, num_points=args.num_points,
                                     normalize=args.normalize_pc)
+        test_set_ori = ModelNet40Attack('data/attack_data.npz', num_points=args.num_point,
+                                normalize=True)
     else:
         test_set_ori = ModelNetDataLoader(root='official_data/modelnet40_normal_resampled', args=args, split='test', process_data=args.process_data)
         test_set = ModelNet40Normal(args.data_root, num_points=args.num_point,

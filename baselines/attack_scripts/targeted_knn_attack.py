@@ -14,6 +14,7 @@ from torch.nn.parallel import DistributedDataParallel
 
 import sys
 sys.path.append('../')
+sys.path.append('./')
 
 from config import BEST_WEIGHTS
 from config import MAX_KNN_BATCH as BATCH_SIZE
@@ -65,8 +66,8 @@ if __name__ == "__main__":
                         help='Model to use, [pointnet, pointnet++, dgcnn, pointconv]')
     parser.add_argument('--feature_transform', type=str2bool, default=False,
                         help='whether to use STN on features in PointNet')
-    parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
-                        choices=['mn40', 'remesh_mn40', 'opt_mn40', 'conv_opt_mn40'])
+    parser.add_argument('--dataset', type=str, default='ori_mn40', metavar='N',
+                        choices=['mn40', 'ori_mn40','remesh_mn40', 'opt_mn40', 'conv_opt_mn40'])
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
                         help='Size of batch')
     parser.add_argument('--num_points', type=int, default=1024,
@@ -82,6 +83,8 @@ if __name__ == "__main__":
                         help='min margin in logits adv loss')
     parser.add_argument('--attack_lr', type=float, default=1e-3,
                         help='lr in CW optimization')
+    parser.add_argument('--budget', type=float, default=0.1,
+                        help='clip budget')
     parser.add_argument('--num_iter', type=int, default=2500, metavar='N',
                         help='Number of iterations in each search step')
     parser.add_argument('--local_rank', default=-1, type=int,
@@ -136,7 +139,7 @@ if __name__ == "__main__":
     dist_func = ChamferkNNDist(chamfer_method='adv2ori',
                                knn_k=5, knn_alpha=1.05,
                                chamfer_weight=5., knn_weight=3.)
-    clip_func = ProjectInnerClipLinf(budget=0.1)
+    clip_func = ProjectInnerClipLinf(budget=args.budget)
     attacker = CWKNN(model, adv_func, dist_func, clip_func,
                      attack_lr=args.attack_lr,
                      num_iter=args.num_iter)
