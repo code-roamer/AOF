@@ -92,7 +92,7 @@ MAX_PERTURB_BATCH = {
     1024: {
         'pointnet': 384,
         'pointnet2': 78,
-        'dgcnn': 52,
+        'dgcnn': 80,
         'pointconv': 57,
     },
 }

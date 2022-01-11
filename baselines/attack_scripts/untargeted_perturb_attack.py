@@ -22,13 +22,14 @@ from dataset import ModelNet40Attack, ModelNetDataLoader
 from model import DGCNN, PointNetCls, PointNet2ClsSsg, PointConvDensityClsSsg
 from util.utils import str2bool, set_seed
 from attack import CWPerturb
-from attack import CrossEntropyAdvLoss, LogitsAdvLoss, UntargetedLogitsAdvLoss
+from attack import CrossEntropyAdvLoss, UntargetedLogitsAdvLoss
 from attack import L2Dist
 from attack import ClipPointsLinf
 
 
 def attack():
     model.eval()
+    all_ori_pc = []
     all_adv_pc = []
     all_real_lbl = []
     num = 0
@@ -42,13 +43,15 @@ def attack():
 
         # results
         num += success_num
+        all_ori_pc.append(pc.detach().cpu().numpy())
         all_adv_pc.append(best_pc)
         all_real_lbl.append(label.detach().cpu().numpy())
 
     # accumulate results
+    all_ori_pc = np.concatenate(all_ori_pc, axis=0)  # [num_data, K, 3]
     all_adv_pc = np.concatenate(all_adv_pc, axis=0)  # [num_data, K, 3]
     all_real_lbl = np.concatenate(all_real_lbl, axis=0)  # [num_data]
-    return all_adv_pc, all_real_lbl, num
+    return all_ori_pc, all_adv_pc, all_real_lbl, num
 
 
 if __name__ == "__main__":
@@ -78,7 +81,7 @@ if __name__ == "__main__":
                         help='Adversarial loss function to use')
     parser.add_argument('--kappa', type=float, default=30.,
                         help='min margin in logits adv loss')
-    parser.add_argument('--budget', type=float, default=0.1,
+    parser.add_argument('--budget', type=float, default=0.18,
                         help='clip budget')
     parser.add_argument('--attack_lr', type=float, default=1e-2,
                         help='lr in CW optimization')
@@ -154,29 +157,25 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_set, batch_size=args.batch_size, 
                     shuffle=False, num_workers=4, 
                     drop_last=False, sampler=test_sampler)
-    # test_set = ModelNet40Attack(args.data_root, num_point=args.num_point,
-    #                             normalize=True)
-    # test_loader = DataLoader(test_set, batch_size=args.batch_size,
-    #                          shuffle=False, num_workers=4,
-    #                          pin_memory=True, drop_last=False)
 
     # run attack
-    attacked_data, real_label, success_num = attack()
+    ori_data, attacked_data, real_label, success_num = attack()
 
     # accumulate results
     data_num = len(test_set)
     success_rate = float(success_num) / float(data_num)
 
     # save results
-    save_path = './attack/results/{}_{}/PerturbU'.\
+    save_path = './attack/results/{}_{}/Perturb'.\
         format(args.dataset, args.num_point)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     if args.adv_func == 'logits':
         args.adv_func = 'logits_kappa={}'.format(args.kappa)
-    save_name = 'Perturb-{}-{}-success_{:.4f}.npz'.\
+    save_name = 'UPerturb-{}-{}-success_{:.4f}-rank_{}.npz'.\
         format(args.model, args.budget,
-               success_rate)
+               success_rate, args.local_rank)
     np.savez(os.path.join(save_path, save_name),
+             ori_pc=ori_data.astype(np.float32),
              test_pc=attacked_data.astype(np.float32),
              test_label=real_label.astype(np.uint8))

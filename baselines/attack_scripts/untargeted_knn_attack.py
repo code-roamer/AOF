@@ -22,7 +22,7 @@ from config import MAX_KNN_BATCH as BATCH_SIZE
 from dataset import ModelNetDataLoader, ModelNet40Attack
 from model import DGCNN, PointNetCls, PointNet2ClsSsg, PointConvDensityClsSsg
 from util.utils import str2bool, set_seed
-from attack import CWKNN, CWUKNN
+from attack import CWUKNN
 from attack import CrossEntropyAdvLoss, UntargetedLogitsAdvLoss
 from attack import ChamferkNNDist
 from attack import ProjectInnerClipLinf
@@ -30,28 +30,29 @@ from attack import ProjectInnerClipLinf
 
 def attack():
     model.eval()
+    all_ori_pc = []
     all_adv_pc = []
     all_real_lbl = []
     num = 0
-    at_num, trans_num, total_num = 0, 0, 0
     for pc, label in tqdm(test_loader):
         with torch.no_grad():
             pc, label = pc.float().cuda(non_blocking=True), \
                 label.long().cuda(non_blocking=True)
-                
+
         # attack!
-        best_pc, success_num = attacker.attack(pc, label)
+        _, best_pc, success_num = attacker.attack(pc, label)
 
         # results
         num += success_num
+        all_ori_pc.append(pc.detach().cpu().numpy())
         all_adv_pc.append(best_pc)
         all_real_lbl.append(label.detach().cpu().numpy())
 
     # accumulate results
+    all_ori_pc = np.concatenate(all_ori_pc, axis=0)  # [num_data, K, 3]
     all_adv_pc = np.concatenate(all_adv_pc, axis=0)  # [num_data, K, 3]
     all_real_lbl = np.concatenate(all_real_lbl, axis=0)  # [num_data]
-    return all_adv_pc, all_real_lbl, num
-
+    return all_ori_pc, all_adv_pc, all_real_lbl, num
 
 if __name__ == "__main__":
     # Training settings
@@ -79,7 +80,7 @@ if __name__ == "__main__":
                         help='Adversarial loss function to use')
     parser.add_argument('--kappa', type=float, default=15.,
                         help='min margin in logits adv loss')
-    parser.add_argument('--budget', type=float, default=0.1,
+    parser.add_argument('--budget', type=float, default=0.18,
                         help='clip budget')
     parser.add_argument('--attack_lr', type=float, default=1e-3,
                         help='lr in CW optimization')
@@ -145,7 +146,7 @@ if __name__ == "__main__":
                                knn_k=5, knn_alpha=1.05,
                                chamfer_weight=5., knn_weight=3.)
     clip_func = ProjectInnerClipLinf(budget=args.budget)
-    attacker = CWKNN(model, adv_func, dist_func, clip_func,
+    attacker = CWUKNN(model, adv_func, dist_func, clip_func,
                      attack_lr=args.attack_lr,
                      num_iter=args.num_iter)
 
@@ -157,7 +158,7 @@ if __name__ == "__main__":
                     drop_last=False, sampler=test_sampler)
 
     # run attack
-    attacked_data, real_label, success_num = attack()
+    ori_data, attacked_data, real_label, success_num = attack()
 
     # accumulate results
     data_num = len(test_set)
@@ -170,9 +171,10 @@ if __name__ == "__main__":
         os.makedirs(save_path)
     if args.adv_func == 'logits':
         args.adv_func = 'logits_kappa={}'.format(args.kappa)
-    save_name = 'kNNU-{}-{}-success_{:.4f}.npz'.\
+    save_name = 'UkNN-{}-{}-success_{:.4f}-rank_{}.npz'.\
         format(args.model, args.budget,
-               success_rate)
+               success_rate, args.local_rank)
     np.savez(os.path.join(save_path, save_name),
+             ori_pc=ori_data.astype(np.float32),
              test_pc=attacked_data.astype(np.float32),
              test_label=real_label.astype(np.uint8))
