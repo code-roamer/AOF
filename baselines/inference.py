@@ -138,7 +138,7 @@ if __name__ == "__main__":
                              'If not specified, judge from data_root')
     parser.add_argument('--dataset', type=str, default='mn40', metavar='N',
                         choices=['mn40', 'remesh_mn40',
-                                 'opt_mn40', 'conv_opt_mn40'])
+                                 'opt_mn40', 'conv_opt_mn40', 'aug_mn40','ori_mn40'])
     parser.add_argument('--normalize_pc', type=str2bool, default=False,
                         help='normalize in dataloader')
     parser.add_argument('--batch_size', type=int, default=-1, metavar='BS',
