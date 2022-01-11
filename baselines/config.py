@@ -167,7 +167,7 @@ MAX_AdvPC_BATCH = {
 
 MAX_AOF_BATCH = {
     1024: {
-        'pointnet': 512,
+        'pointnet': 256,
         'pointnet2': 84,
         'dgcnn': 80,
         'pointconv': 128,
