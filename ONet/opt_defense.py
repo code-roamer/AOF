@@ -327,6 +327,10 @@ def defend_npz_test_data(path=args.data_root):
         target_label = npz['target_label']
     except KeyError:
         target_label = None
+    try:
+        ori_pc = npz['ori_pc']
+    except KeyError:
+        ori_pc = None
 
     # defend
     def_test_pc = defend_point_cloud(test_pc)
@@ -334,9 +338,15 @@ def defend_npz_test_data(path=args.data_root):
     # save new npz file
     save_path = get_save_name(path)
     if target_label is None:
-        np.savez(save_path,
-                 test_pc=def_test_pc.astype(np.float32),
-                 test_label=test_label.astype(np.uint8))
+        if ori_pc is None:
+            np.savez(save_path,
+                    test_pc=def_test_pc.astype(np.float32),
+                    test_label=test_label.astype(np.uint8))
+        else:
+            np.savez(save_path,
+                    ori_pc=ori_pc.astype(np.float32),
+                    test_pc=def_test_pc.astype(np.float32),
+                    test_label=test_label.astype(np.uint8))
     else:
         np.savez(save_path,
                  test_pc=def_test_pc.astype(np.float32),

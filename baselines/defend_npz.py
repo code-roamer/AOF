@@ -25,7 +25,15 @@ def defend(data_root, one_defense):
     npz_data = np.load(data_root)
     test_pc = npz_data['test_pc']
     test_label = npz_data['test_label']
-    target_label = npz_data['target_label']
+    try:
+        target_label = npz_data['target_label']
+    except KeyError:
+        target_label = None
+    try:
+        ori_pc = npz_data['ori_pc']
+    except KeyError:
+        ori_pc = None
+    # target_label = npz_data['target_label']
 
     # defense module
     if one_defense.lower() == 'srs':
@@ -64,10 +72,26 @@ def defend(data_root, one_defense):
         all_defend_pc += defend_batch_pc
 
     all_defend_pc = np.array(all_defend_pc)
-    np.savez(os.path.join(save_folder, save_name),
-             test_pc=all_defend_pc,
-             test_label=test_label.astype(np.uint8),
-             target_label=target_label.astype(np.uint8))
+    if target_label is None:
+        if ori_pc is None:
+            np.savez(os.path.join(save_folder, save_name),
+                    test_pc=all_defend_pc,
+                    test_label=test_label.astype(np.uint8))
+        else:
+            np.savez(os.path.join(save_folder, save_name),
+                    ori_pc=ori_pc.astype(np.float32),
+                    test_pc=all_defend_pc,
+                    test_label=test_label.astype(np.uint8))
+    else:
+        np.savez(os.path.join(save_folder, save_name),
+                 test_pc=all_defend_pc,
+                 test_label=test_label.astype(np.uint8),
+                 target_label=target_label.astype(np.uint8))
+    print('defense result saved to {}'.format(os.path.join(save_folder, save_name)))
+    # np.savez(os.path.join(save_folder, save_name),
+    #          test_pc=all_defend_pc,
+    #          test_label=test_label.astype(np.uint8),
+    #          target_label=target_label.astype(np.uint8))
 
 
 if __name__ == '__main__':
