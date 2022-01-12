@@ -112,13 +112,15 @@ def test_normal():
             adv_preds = torch.argmax(adv_logits, dim=-1)
             mask_ori = (ori_preds == label)
             mask_adv = (adv_preds == label)
-            at_denom += mask_ori.sum().float()
-            at_num += mask_ori.sum().float() - (mask_ori * mask_adv).sum().float()
+            at_denom += mask_ori.sum().float().item()
+            at_num += mask_ori.sum().float().item() - (mask_ori * mask_adv).sum().float().item()
             denom += float(batch_size)
             num += mask_adv.sum().float()
 
-    print('Overall attack success rate: {:.4f}'.format(at_num / (at_denom + 1e-9)))
-    print('Overall accuracy: {:.4f}'.format(num / (denom + 1e-9)))
+    #print('Overall attack success rate: {:.4f}'.format(at_num / (at_denom + 1e-9)))
+    ASR = at_num / (at_denom + 1e-9)
+    #print('Overall accuracy: {:.4f}'.format(num / (denom + 1e-9)))
+    print(ASR)
 
 
 if __name__ == "__main__":

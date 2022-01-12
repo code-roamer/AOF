@@ -44,7 +44,7 @@ def adjust_lr(optimizer, new_lr):
 
 
 def set_seed(seed=1):
-    print('Using random seed', seed)
+    #print('Using random seed', seed)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
