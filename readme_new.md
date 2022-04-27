@@ -23,7 +23,13 @@ If you find our code or paper useful, please considering citing
 ### How to use
 
 #### Dataset
+we use aligned modelnet40 dataset to test the untargeted attack: https://shapenet.cs.stanford.edu/media/modelnet40_normal_resampled.zip download and unzip as baselines/official_data/modelnet40_normal_resampled
+ our pretrained model weights for aligned modelnet40 dataset:
+ without data augmentation:https://drive.google.com/file/d/1UP0Io60MSZjq2VqaJpLeJiyD6zeELJtz/view?usp=sharing
 
+ with data augmentation:https://drive.google.com/file/d/1AEWorvStis4GkfOfk2psKDiDK2xcOsLR/view?usp=sharing
+
+ we use data and pretrained models of IF-Defense for targeted attack.
 
 #### Attack
 cd baselines
