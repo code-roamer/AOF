@@ -2,6 +2,7 @@
 import argparse
 import numpy as np
 import os
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -40,6 +41,31 @@ def merge(data_root, prefix):
              test_label=all_real_lbl.astype(np.uint8))
     return os.path.join(data_root, save_name)
 
+def merge_attack(data_root, prefix):
+    target_label_lst = []
+    adv_data_lst = []
+    label_lst = []
+    save_name = prefix+"-concat.npz"
+    if os.path.exists(os.path.join(data_root, save_name)):
+        return os.path.join(data_root, save_name)
+    for file in os.listdir(data_root):
+        if file.startswith(prefix):
+            file_path = os.path.join(data_root, file)
+            adv_data, label, target_label = \
+                load_data(file_path, partition='attack')
+            adv_data_lst.append(adv_data)
+            label_lst.append(label)
+            target_label_lst.append(target_label)
+    all_adv_pc = np.concatenate(adv_data_lst, axis=0)  # [num_data, K, 3]
+    all_real_lbl = np.concatenate(label_lst, axis=0)  # [num_data]
+    all_target_lbl = np.concatenate(target_label_lst, axis=0)  # [num_data]
+
+    np.savez(os.path.join(data_root, save_name),
+             test_pc=all_adv_pc.astype(np.float32),
+             test_label=all_real_lbl.astype(np.uint8),
+             target_label=all_target_lbl.astype(np.uint8))
+    return os.path.join(data_root, save_name)
+
 
 def get_model_name(npz_path):
     """Get the victim model name from npz file path."""
@@ -63,7 +89,7 @@ def test_target():
     acc_save = AverageMeter()
     success_save = AverageMeter()
     with torch.no_grad():
-        for data, label, target in test_loader:
+        for data, label, target in tqdm(test_loader):
             data, label, target = \
                 data.float().cuda(), label.long().cuda(), target.long().cuda()
             # to [B, 3, N] point cloud
@@ -236,12 +262,13 @@ if __name__ == "__main__":
     else:
         model.load_state_dict(torch.load(BEST_WEIGHTS[args.model]))
 
-    data_path = merge(args.data_root, args.prefix)
     # prepare data
     if args.mode == 'target':
+        data_path = merge_attack(args.data_root, args.prefix)
         test_set = ModelNet40Attack(data_path, num_points=args.num_points,
                                     normalize=args.normalize_pc)
     else:
+        data_path = merge(args.data_root, args.prefix)
         test_set = ModelNet40Transfer(data_path, num_points=args.num_point)
     test_loader = DataLoader(test_set, batch_size=args.batch_size,
                              shuffle=False, num_workers=8,

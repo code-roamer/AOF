@@ -41,7 +41,7 @@ def attack():
             target_label = target.long().cuda(non_blocking=True)
 
         # attack!
-        _, best_pc, success_num = attacker.attack(pc, target_label)
+        _, best_pc, success_num = attacker.attack(pc, target_label, label)
 
         # results
         num += success_num

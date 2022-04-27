@@ -37,7 +37,7 @@ class CWAdvPC:
         self.GAMMA = GAMMA
         self.clip_func = clip_func
 
-    def attack(self, data, target):
+    def attack(self, data, target, y_truth):
         """Attack on given data to target.
 
         Args:
@@ -51,6 +51,8 @@ class CWAdvPC:
         ori_data.requires_grad = False
         target = target.long().cuda().detach()
         label_val = target.detach().cpu().numpy()  # [B]
+        y_truth = y_truth.long().cuda().detach()
+        y_truth_val = y_truth.detach().cpu().numpy()  # [B]
 
         # record best results in binary search
         o_bestdist = np.array([1e10] * B)
@@ -106,8 +108,19 @@ class CWAdvPC:
                 clip_time += t3 - t2
 
                 # print
-                pred = torch.argmax(logits, dim=1)  # [B]
-                ae_pred = torch.argmax(ae_logits, dim=1)  # [B]
+                # pred = torch.argmax(logits, dim=1)  # [B]
+                # ae_pred = torch.argmax(ae_logits, dim=1)  # [B]
+                with torch.no_grad():
+                    flogits = self.model(adv_data)  # [B, num_classes]
+                    if isinstance(flogits, tuple):  # PointNet
+                        flogits = flogits[0]
+                    pred = torch.argmax(flogits, dim=1)  # [B]
+
+                    fadv_data_constr = self.ae_model(adv_data)
+                    ae_flogits = self.model(fadv_data_constr)
+                    if isinstance(ae_flogits, tuple):  # PointNet
+                        ae_flogits = ae_flogits[0]
+                    ae_pred = torch.argmax(ae_flogits, dim=1)  # [B]
                 success_num = (pred == target).sum().item()
                 if iteration % (self.num_iter // 5) == 0:
                     print('Step {}, iteration {}, success {}/{}\n'
@@ -124,9 +137,9 @@ class CWAdvPC:
                 input_val = adv_data.detach().cpu().numpy()  # [B, 3, K]
 
                 # update
-                for e, (dist, pred, ae_pred, label, ii) in \
-                        enumerate(zip(dist_val, pred_val, ae_pred_val, label_val, input_val)):
-                    if dist < o_bestdist[e] and pred == label:
+                for e, (dist, pred, ae_pred, label, y, ii) in \
+                        enumerate(zip(dist_val, pred_val, ae_pred_val, label_val, y_truth_val, input_val)):
+                    if dist < o_bestdist[e] and pred == label and ae_pred != y:
                         o_bestdist[e] = dist
                         o_bestscore[e] = pred
                         o_bestattack[e] = ii
