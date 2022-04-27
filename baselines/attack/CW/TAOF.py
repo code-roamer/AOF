@@ -80,7 +80,7 @@ class CWTAOF:
         self.low_pass = low_pass
         self.clip_func = clip_func
 
-    def attack(self, data, target):
+    def attack(self, data, target, y_truth=None):
         """Attack on given data to target.
 
         Args:
@@ -93,12 +93,17 @@ class CWTAOF:
         ori_data = data.clone().detach()
         ori_data.requires_grad = False
         target = target.long().cuda().detach()
+        y_truth = y_truth.long().cuda().detach()
         label_val = target.detach().cpu().numpy()  # [B]
+        y_truth_val = y_truth.detach().cpu().numpy()  # [B]
 
         # record best results in binary search
         o_bestdist = np.array([1e10] * B)
         o_bestscore = np.array([-1] * B)
         o_bestattack = np.zeros((B, 3, K))
+
+        for param in self.model.parameters():
+            param.requires_grad = False
 
         # perform binary search
         for binary_step in range(self.binary_step):
@@ -166,9 +171,18 @@ class CWTAOF:
                 clip_time += t3 - t2
 
                 # print
-                pred = torch.argmax(logits, dim=1)  # [B]
-                lfc_pred = torch.argmax(lfc_logits, dim=1)  # [B]
-                success_num = ((pred == target)*(lfc_pred == target)).sum().item()
+                with torch.no_grad():
+                    flogits = self.model(adv_data)  # [B, num_classes]
+                    if isinstance(flogits, tuple):  # PointNet
+                        flogits = flogits[0]
+                    pred = torch.argmax(flogits, dim=1)  # [B]
+
+                    lfc_flogits = self.model(lfc)
+                    if isinstance(lfc_flogits, tuple):  # PointNet
+                        lfc_flogits = lfc_flogits[0]
+                    lfc_pred = torch.argmax(lfc_flogits, dim=1)  # [B]
+
+                success_num = (pred == target).sum().item()
                 if iteration % (self.num_iter // 5) == 0:
                     print('Step {}, iteration {}, success {}/{}\n'
                           'adv_loss: {:.4f}, dist_loss: {:.4f}'.
@@ -184,9 +198,9 @@ class CWTAOF:
                 input_val = adv_data.detach().cpu().numpy()  # [B, 3, K]
 
                 # update
-                for e, (dist, pred, lfc_pred, label, ii) in \
-                        enumerate(zip(dist_val, pred_val, lfc_pred_val, label_val, input_val)):
-                    if dist < o_bestdist[e] and pred == label:
+                for e, (dist, pred, lfc_pred, label, y, ii) in \
+                        enumerate(zip(dist_val, pred_val, lfc_pred_val, label_val, y_truth_val, input_val)):
+                    if dist < o_bestdist[e] and pred == label and lfc_pred != y: #and lfc_pred != y:
                         o_bestdist[e] = dist
                         o_bestscore[e] = pred
                         o_bestattack[e] = ii
@@ -215,7 +229,7 @@ class CWTAOF:
         o_bestattack[fail_idx] = input_val[fail_idx]
 
         adv_pc = torch.tensor(o_bestattack).to(adv_data)
-        adv_pc = self.clip_func(adv_pc, ori_data)
+        # adv_pc = self.clip_func(adv_pc, ori_data)
 
         logits = self.model(adv_pc)
         if isinstance(logits, tuple):  # PointNet

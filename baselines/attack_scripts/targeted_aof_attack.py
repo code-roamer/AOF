@@ -39,7 +39,7 @@ def attack():
             target_label = target.long().cuda(non_blocking=True)
 
         # attack!
-        _, best_pc, success_num = attacker.attack(pc, target_label)
+        _, best_pc, success_num = attacker.attack(pc, target_label, label)
 
         # results
         num += success_num
@@ -85,7 +85,7 @@ if __name__ == "__main__":
                         help='lr in CW optimization')
     parser.add_argument('--low_pass', type=int, default=100,
                         help='low_pass number')
-    parser.add_argument('--budget', type=float, default=0.08,
+    parser.add_argument('--budget', type=float, default=0.18,
                         help='FGM attack budget')
     parser.add_argument('--GAMMA', type=float, default=0.25,
                         help='hyperparameter gamma')
@@ -174,9 +174,9 @@ if __name__ == "__main__":
         os.makedirs(save_path)
     if args.adv_func == 'logits':
         args.adv_func = 'logits_kappa={}'.format(args.kappa)
-    save_name = 'TAOF-{}-{}-success_{:.4f}-{:.2f}-rank_{}.npz'.\
-        format(args.model, args.adv_func,
-               success_rate, args.budget, args.local_rank)
+    save_name = 'TAOF-{}-{}-{}-success_{:.4f}-rank_{}.npz'.\
+        format(args.model, args.budget,args.low_pass,
+               success_rate, args.local_rank)
     np.savez(os.path.join(save_path, save_name),
              test_pc=attacked_data.astype(np.float32),
              test_label=real_label.astype(np.uint8),
