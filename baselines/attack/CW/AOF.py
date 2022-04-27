@@ -166,8 +166,16 @@ class CWAOF:
                 clip_time += t3 - t2
 
                 # print
-                pred = torch.argmax(logits, dim=1)  # [B]
-                lfc_pred = torch.argmax(lfc_logits, dim=1)  # [B]
+                with torch.no_grad():
+                    flogits = self.model(adv_data)  # [B, num_classes]
+                    if isinstance(flogits, tuple):  # PointNet
+                        flogits = flogits[0]
+                    pred = torch.argmax(flogits, dim=1)  # [B]
+
+                    lfc_flogits = self.model(lfc)
+                    if isinstance(lfc_flogits, tuple):  # PointNet
+                        lfc_flogits = lfc_flogits[0]
+                    lfc_pred = torch.argmax(lfc_flogits, dim=1)  # [B]
                 success_num = ((pred != target)*(lfc_pred != target)).sum().item()
                 if iteration % (self.num_iter // 5) == 0:
                     print('Step {}, iteration {}, success {}/{}\n'
@@ -186,7 +194,7 @@ class CWAOF:
                 # update
                 for e, (dist, pred, lfc_pred, label, ii) in \
                         enumerate(zip(dist_val, pred_val, lfc_pred_val, label_val, input_val)):
-                    if dist < o_bestdist[e] and pred != label and lfc_pred != label:
+                    if dist < o_bestdist[e] and pred != label and (lfc_pred != label or self.GAMMA < 0.001):
                         o_bestdist[e] = dist
                         o_bestscore[e] = pred
                         o_bestattack[e] = ii
