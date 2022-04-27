@@ -26,23 +26,24 @@ If you find our code or paper useful, please considering citing
 
 
 #### Attack
+```
 cd baselines
-
-untargeted aof attack:
-
+```
+For untargeted aof attack:
+```
 NCCL_DEBUG=INFO CUDA_VISIBLE_DEVICES=0,1,2,3,4 python -m torch.distributed.launch --nproc_per_node=5 --master_port=29502 attack_scripts/untargeted_aof_attack.py --process_data --model=pointnet --batch_size=128
+```
 
-
-untargeted advpc attack:
-
+For untargeted advpc attack:
+```
 NCCL_DEBUG=INFO CUDA_VISIBLE_DEVICES=0,1,2,3,4 python -m torch.distributed.launch --nproc_per_node=5 --master_port=29502 attack_scripts/untargeted_advpc_attack.py --process_data --model=pointnet --batch_size=32
-
+```
 
 #### Evaluate
-merge and inference generated adversarial examples:
-
+Merge and inference generated adversarial examples:
+```
 CUDA_VISIBLE_DEVICES=0 python inference.py --data_root=attack/results/mn40_1024/AdvPC --prefix=UAdvPC-pointnet-0.18-GAMMA_0.25 --model=pointconv
-
+```
 
 ### License
 Our code is released under MIT License.
