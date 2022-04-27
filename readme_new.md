@@ -26,3 +26,7 @@ If you find our code or paper useful, please considering citing
 
 
 #### Evaluate
+
+
+### License
+Our code is released under MIT License.
