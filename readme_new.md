@@ -53,3 +53,15 @@ CUDA_VISIBLE_DEVICES=0 python inference.py --data_root=attack/results/mn40_1024/
 
 ### License
 Our code is released under MIT License.
+
+## Acknowledgements
+
+We thank the authors of following works for opening source their excellent codes.
+
+- [PointNet/PointNet++](https://github.com/yanx27/Pointnet_Pointnet2_pytorch), [DGCNN](https://github.com/WangYueFt/dgcnn), [PointConv](https://github.com/DylanWusee/pointconv_pytorch), [RS-CNN](https://github.com/Yochengliu/Relation-Shape-CNN)
+- [Perturb/Add attack](https://github.com/xiangchong1/3d-adv-pc), [kNN attack](https://github.com/jinyier/ai_pointnet_attack), [Drop attack](https://github.com/tianzheng4/PointCloud-Saliency-Maps)
+- [PU-Net](https://github.com/lyqun/PU-Net_pytorch), [DUP-Net](https://github.com/RyanHangZhou/DUP-Net)
+- [ONet](https://github.com/autonomousvision/occupancy_networks), [ConvONet](https://github.com/autonomousvision/convolutional_occupancy_networks)
+- [IF-Defense](https://github.com/Wuziyi616/IF-Defense)
+
+We also thank the authors of related papers/repos for their inspiring discussions with us.
